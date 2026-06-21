@@ -76,7 +76,7 @@ public class GazaMapApp extends Application {
     // Small field for the distance value.
     private TextField distanceField;
     // Last calculated path, kept so it can be drawn on the map.
-    private MyArrayList<City> currentPath = new MyArrayList<>();
+    private MyLinkedList<City> currentPath = new MyLinkedList<>();
 
     public static void main(String[] args) {
         launch(args);
@@ -236,7 +236,7 @@ public class GazaMapApp extends Application {
         drawMap();
     }
 
-    private String formatPath(MyArrayList<City> path) {
+    private String formatPath(MyLinkedList<City> path) {
         // Convert the city list to text like A -> B -> C.
         StringBuilder builder = new StringBuilder();
         for (int i = 0; i < path.size(); i++) {
@@ -252,7 +252,7 @@ public class GazaMapApp extends Application {
         // Clear source, target, and results.
         sourceBox.setValue(null);
         targetBox.setValue(null);
-        currentPath = new MyArrayList<>();
+        currentPath = new MyLinkedList<>();
         pathArea.clear();
         distanceField.clear();
         drawMap();
@@ -483,24 +483,20 @@ public class GazaMapApp extends Application {
         gc.setLineWidth(5);
         gc.setStroke(Color.rgb(0, 0, 0, 0.85));
         for (int i = 0; i < graph.getAllAdjacencyLists().size(); i++) {
-            MyArrayList<Edge> list = graph.getAllAdjacencyLists().get(i);
+            MyLinkedList<Edge> list = graph.getAllAdjacencyLists().get(i);
             for (int j = 0; j < list.size(); j++) {
                 Edge edge = list.get(j);
-                if (edge.getFrom().getIndex() < edge.getTo().getIndex()) {
-                    drawLine(gc, edge.getFrom(), edge.getTo());
-                }
+                drawLine(gc, edge.getFrom(), edge.getTo());
             }
         }
 
         gc.setLineWidth(3.4);
         gc.setStroke(Color.rgb(0, 136, 255, 0.98));
         for (int i = 0; i < graph.getAllAdjacencyLists().size(); i++) {
-            MyArrayList<Edge> list = graph.getAllAdjacencyLists().get(i);
+            MyLinkedList<Edge> list = graph.getAllAdjacencyLists().get(i);
             for (int j = 0; j < list.size(); j++) {
                 Edge edge = list.get(j);
-                if (edge.getFrom().getIndex() < edge.getTo().getIndex()) {
-                    drawLine(gc, edge.getFrom(), edge.getTo());
-                }
+                drawLine(gc, edge.getFrom(), edge.getTo());
             }
         }
     }

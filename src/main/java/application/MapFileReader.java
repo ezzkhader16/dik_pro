@@ -39,7 +39,7 @@ public class MapFileReader {
                 graph.addCity(new City(i, name, latitude, longitude));
             }
 
-            // Read roads: CityA CityB.
+            // Read directed roads: FromCity ToCity.
             for (int i = 0; i < edgeCount; i++) {
                 String line = nextDataLine(reader);
                 if (line == null) {
@@ -47,8 +47,8 @@ public class MapFileReader {
                 }
 
                 StringTokenizer tokens = new StringTokenizer(line);
-                // Add the road as an undirected road.
-                graph.addUndirectedRoad(tokens.nextToken(), tokens.nextToken());
+                // Add one directed road from the first city to the second city.
+                graph.addDirectedRoad(tokens.nextToken(), tokens.nextToken());
             }
         }
 

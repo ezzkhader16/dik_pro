@@ -1,4 +1,4 @@
-ملف شرح الحسابات في مشروع Gaza Dijkstra
+﻿ملف شرح الحسابات في مشروع Gaza Dijkstra
 ========================================
 
 هذا الملف يشرح كل العمليات الحسابية الموجودة في المشروع: حساب المسافة، حساب موقع المدينة على الخريطة، حساب أقصر مسار، وحسابات الـ Priority Queue.
@@ -486,24 +486,52 @@ right child = i * 2 + 2
 5. نكرر حتى يصبح أصغر من أولاده.
 
 
-17. حساب تكبير MyArrayList
---------------------------
+17. حساب عمل MyLinkedList
+-------------------------
 
 الملف:
-src/main/java/application/MyArrayList.java
+src/main/java/application/MyLinkedList.java
 
-إذا data امتلأت:
+MyLinkedList لا تستخدم array داخلي ولا تحتاج تكبير capacity.
 
-newData = new Object[data.length * 2]
+الفكرة أنها تتكون من nodes.
 
-ثم ننسخ العناصر القديمة إلى الجديدة.
+كل Node يحتوي:
+
+value = العنصر نفسه
+next = رابط على العنصر التالي
+
+عند add(value):
+
+1. ننشئ Node جديدة.
+2. إذا كانت القائمة فاضية:
+   head = node
+   tail = node
+3. إذا كانت القائمة غير فاضية:
+   tail.next = node
+   tail = node
+4. نزيد size بمقدار 1.
+
+عند add(0, value):
+
+1. نخلي node.next يشير إلى head القديم.
+2. نخلي head يشير إلى node الجديدة.
+3. نزيد size.
+
+هذه العملية مهمة في Dijkstra لأن buildPath يبني المسار من target للخلف، لذلك يضيف كل مدينة في بداية القائمة حتى يصبح المسار مرتب من source إلى target.
+
+عند get(index):
+
+لا يوجد وصول مباشر مثل array.
+نبدأ من head ونمشي next بعدد خطوات يساوي index.
 
 مثال:
 
-الحجم القديم = 10
-إذا امتلأ، الحجم الجديد = 20
+إذا index = 3
+نمشي:
+head -> node1 -> node2 -> node3
 
-ثم 40، ثم 80، وهكذا.
+ثم نرجع value الموجودة في node3.
 
 
 18. حساب عدد المدن والطرق من الملف
@@ -575,4 +603,3 @@ coastXAtY + clamp.
 
 المسافة النهائية:
 dist[target].
-

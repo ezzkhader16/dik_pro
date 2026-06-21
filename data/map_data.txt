@@ -1,5 +1,6 @@
 # Gaza Strip locations shown on the provided map image.
 # Distances are not stored; the program calculates them from latitude and longitude.
+# Roads are directed: each road line means FromCity ToCity.
 25 38
 ErezCrossing 31.5587000 34.5403000
 BeitLahia 31.5497700 34.5024697

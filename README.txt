@@ -1,4 +1,4 @@
-Gaza Dijkstra JavaFX - VS Code Version
+﻿Gaza Dijkstra JavaFX - VS Code Version
 ======================================
 
 Open this exact folder in VS Code:
@@ -36,9 +36,10 @@ data/coordinate_sources.txt
 Map background image:
 src/main/resources/images/map-background.png
 
-The program draws the roads, city points, labels, and selected shortest path on top of this image.
+The program draws city points, labels, and the selected shortest path on top of this image.
 Each city point is a JavaFX Button. Clicking a city button displays its latitude and longitude.
 Source and target are selected only from the combo boxes.
+Roads in data/map_data.txt are directed: each line means FromCity ToCity.
 
 Coordinate source:
 The Gaza locations in data/map_data.txt were checked using OpenStreetMap/Nominatim where available.
@@ -46,5 +47,5 @@ The Gaza locations in data/map_data.txt were checked using OpenStreetMap/Nominat
 Notes:
 - The UI does not use FXML.
 - Maven is only used for dependencies and running JavaFX.
-- The algorithm uses custom MyArrayList and custom MinPriorityQueue.
-- It does not use java.util.ArrayList, java.util.PriorityQueue, HashMap, Map, or List.
+- The algorithm uses custom MyLinkedList and custom MinPriorityQueue.
+- It does not use java.util.LinkedList, java.util.PriorityQueue, HashMap, Map, or List.

@@ -38,7 +38,7 @@ public class Dijkstra {
     // Dijkstra table, one entry for each city by city index.
     private final TableEntry[] table;
     // Cities changed during the last algorithm run.
-    private final MyArrayList<City> touched = new MyArrayList<>();
+    private final MyLinkedList<City> touched = new MyLinkedList<>();
 
     public Dijkstra(Graph graph) {
         this.graph = graph;
@@ -80,8 +80,8 @@ public class Dijkstra {
                 break;
             }
 
-            // Check all cities adjacent to the current city.
-            MyArrayList<Edge> edges = graph.getEdgesFrom(v);
+            // Check only outgoing roads from the current city because the graph is directed.
+            MyLinkedList<Edge> edges = graph.getEdgesFrom(v);
             for (int i = 0; i < edges.size(); i++) {
                 Edge edge = edges.get(i);
                 City w = edge.getTo();
@@ -107,15 +107,15 @@ public class Dijkstra {
 
         // If the distance stays infinity, no path exists.
         if (table[target.getIndex()].dist == INF) {
-            return new PathResult(new MyArrayList<City>(), INF);
+            return new PathResult(new MyLinkedList<City>(), INF);
         }
         // Return the path and final distance.
         return new PathResult(buildPath(source, target), table[target.getIndex()].dist);
     }
 
-    private MyArrayList<City> buildPath(City source, City target) {
+    private MyLinkedList<City> buildPath(City source, City target) {
         // Build the path backward from the target using path, then insert at the front.
-        MyArrayList<City> path = new MyArrayList<>();
+        MyLinkedList<City> path = new MyLinkedList<>();
         City current = target;
 
         while (current != null) {
