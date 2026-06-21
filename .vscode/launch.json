@@ -12,7 +12,7 @@
       ],
       "vmArgs": "--module-path \"C:\\JavaSDK\\javafx-sdk-21.0.10\\lib\" --add-modules javafx.controls",
       "preLaunchTask": "compile without maven",
-      "console": "integratedTerminal"
+      "console": "internalConsole"
     }
   ]
 }
