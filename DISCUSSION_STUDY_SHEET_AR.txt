@@ -1,0 +1,873 @@
+ورقة فهم ومناقشة مشروع Gaza Dijkstra JavaFX
+===========================================
+
+هذا الملف مكتوب كأنه ملاحظات تكتبها على ورقة قبل المناقشة.
+الفكرة ليست حفظ الكود حرفيا، بل فهم ماذا فعلنا ولماذا.
+
+
+1. فكرة المشروع بجملة واحدة
+---------------------------
+
+المشروع يعرض خريطة غزة، ويقرأ البلدات والطرق من ملف، ثم يستخدم خوارزمية Dijkstra لإيجاد أقصر مسار من بلدة مصدر Source إلى بلدة هدف Target.
+
+المدن تمثل Vertices.
+الطرق تمثل Edges.
+المسافة بين كل مدينتين هي Weight.
+الـ Graph صار Directed، يعني الطريق له اتجاه واحد.
+
+
+2. ماذا يعني Directed Graph في مشروعنا؟
+--------------------------------------
+
+في الملف data/map_data.txt كل سطر طريق يكون هكذا:
+
+GazaCity AlZeitoun
+
+معناه:
+
+GazaCity -> AlZeitoun
+
+ولا يعني العكس.
+
+إذا أردنا طريقا بالعكس، لازم نكتب سطر ثاني:
+
+AlZeitoun GazaCity
+
+في الكود هذا موجود في Graph.java:
+
+addDirectedRoad(fromName, toName)
+
+هذه الدالة تعمل Edge واحدة فقط:
+
+from -> to
+
+ولا تضيف:
+
+to -> from
+
+الجملة التي أقولها للدكتور:
+استخدمنا Directed Graph لأن كل road line في الملف يمثل اتجاه واحد من أول مدينة إلى ثاني مدينة، لذلك Dijkstra يفحص فقط outgoing edges من المدينة الحالية.
+
+
+3. كيف مخزن البيانات داخل الملف؟
+-------------------------------
+
+الملف:
+data/map_data.txt
+
+أول سطر بعد التعليقات:
+
+25 38
+
+معناه:
+
+25 = عدد المدن
+38 = عدد الطرق
+
+بعدها يوجد 25 سطر للمدن.
+كل سطر مدينة شكله:
+
+CityName latitude longitude
+
+مثال:
+
+GazaCity 31.5050311 34.4641381
+
+بعد المدن يوجد 38 سطر للطرق.
+كل سطر طريق شكله:
+
+FromCity ToCity
+
+مثال:
+
+GazaCity WadiGaza
+
+معناه طريق موجه من GazaCity إلى WadiGaza.
+
+الدكتور إذا سأل:
+هل المسافة مخزنة في الملف؟
+
+الجواب:
+لا. الملف يخزن اسم المدينة والـ latitude والـ longitude فقط. المسافة تحسب داخل البرنامج باستخدام معادلة Haversine.
+
+
+4. كيف يقرأ البرنامج الملف؟
+---------------------------
+
+الكلاس:
+MapFileReader.java
+
+الخطوات:
+
+1. يفتح الملف.
+2. يتجاهل السطور الفارغة والتعليقات التي تبدأ بـ #.
+3. يقرأ أول سطر ويأخذ منه cityCount و edgeCount.
+4. يقرأ cityCount مدينة.
+5. لكل مدينة ينشئ object من City:
+
+new City(i, name, latitude, longitude)
+
+6. بعدها يقرأ edgeCount طريق.
+7. لكل طريق يستدعي:
+
+graph.addDirectedRoad(from, to)
+
+الجملة التي أقولها:
+MapFileReader هو المسؤول عن تحويل النص الموجود في الملف إلى Graph حقيقي داخل الذاكرة.
+
+
+5. كيف مخزن الـ Graph داخل البرنامج؟
+-----------------------------------
+
+الكلاس:
+Graph.java
+
+استخدمنا:
+
+MyLinkedList<City> cities
+
+هذه تخزن كل المدن.
+
+واستخدمنا:
+
+MyLinkedList<MyLinkedList<Edge>> adjacency
+
+هذه تسمى adjacency list.
+
+معناها:
+لكل مدينة عندنا linked list فيها الطرق الخارجة منها.
+
+مثال:
+إذا كانت غزة لها طرق إلى الشاطئ والزيتون ووادي غزة، يكون عند index غزة list فيها:
+
+GazaCity -> AlShatiCamp
+GazaCity -> AlZeitoun
+GazaCity -> WadiGaza
+
+الجملة التي أقولها:
+استخدمنا adjacency list لأنها مناسبة للـ Graph، وكل مدينة تخزن فقط الجيران الذين يمكن الذهاب إليهم منها.
+
+
+6. لماذا MyLinkedList وليس LinkedList الجاهزة؟
+---------------------------------------------
+
+لأن الدكتور طلب عدم استخدام الجاهز.
+
+عملنا كلاس:
+MyLinkedList.java
+
+الفكرة:
+القائمة تتكون من Nodes.
+
+كل Node فيها:
+
+value
+next
+
+value = العنصر المخزن.
+next = رابط على العنصر التالي.
+
+وعندنا:
+
+head = أول node
+tail = آخر node
+size = عدد العناصر
+
+عند add(value):
+
+إذا القائمة فاضية:
+head = node
+tail = node
+
+إذا القائمة ليست فاضية:
+tail.next = node
+tail = node
+
+عند get(index):
+نمشي من head خطوة خطوة حتى نصل للـ index.
+
+الجملة التي أقولها:
+MyLinkedList مكتوبة يدويا، ولم أستخدم java.util.LinkedList. استخدمتها لتخزين المدن، adjacency lists، والمسار النهائي.
+
+
+7. لماذا استخدمنا Dijkstra؟
+---------------------------
+
+لأن عندنا Graph فيه:
+
+Vertices = المدن
+Edges = الطرق
+Weights = المسافات
+
+وكل المسافات موجبة.
+
+Dijkstra مناسبة لإيجاد أقصر مسار في weighted graph عندما تكون الأوزان non-negative.
+
+المشروع يحتاج أقصر مسار من source إلى target، لذلك Dijkstra اختيار مناسب.
+
+الجملة التي أقولها:
+استخدمنا Dijkstra لأن كل road له positive distance، والخوارزمية تجد shortest path من source إلى target بناء على مجموع weights.
+
+
+8. ماذا يوجد داخل Dijkstra table؟
+---------------------------------
+
+في Dijkstra.java يوجد TableEntry:
+
+known
+dist
+path
+touched
+
+known:
+هل انتهينا من هذه المدينة واعتمدنا أقصر مسافة لها؟
+
+dist:
+أقصر مسافة معروفة من source إلى هذه المدينة.
+
+path:
+المدينة السابقة في أقصر مسار.
+
+touched:
+مساعدة لتنظيف المدن التي تغيرت في آخر تشغيل فقط.
+
+هذا قريب من السلايدات:
+
+known / dist / path
+
+الجملة التي أقولها:
+طبقت جدول Dijkstra مثل السلايدات: known لمعرفة المدن المنتهية، dist للمسافة، path لتخزين predecessor.
+
+
+9. كيف تبدأ Dijkstra؟
+---------------------
+
+في البداية:
+
+كل dist = infinity
+dist[source] = 0
+
+في الكود:
+
+table[source.getIndex()].dist = 0.0;
+
+ثم نضع source داخل MinPriorityQueue:
+
+queue.add(new QueueNode(source, 0.0));
+
+معنى ذلك:
+نبدأ من المصدر، والمسافة من المصدر لنفسه تساوي صفر.
+
+
+10. لماذا استخدمنا MinPriorityQueue؟
+------------------------------------
+
+Dijkstra كل مرة تحتاج المدينة ذات أقل dist.
+
+بدون priority queue، سنضطر نبحث في كل المدن كل مرة.
+
+MinPriorityQueue تعطينا أقل عنصر بسرعة.
+
+والـ PriorityQueue ليست جاهزة من Java.
+عملناها يدويا باستخدام heap.
+
+الجملة التي أقولها:
+استخدمت custom MinPriorityQueue لاختيار unknown vertex صاحب أقل dist، بدل استخدام PriorityQueue الجاهزة.
+
+
+11. كيف تعمل خطوة Relaxation؟
+-----------------------------
+
+Relaxation هي أهم خطوة في Dijkstra.
+
+نكون عند مدينة v.
+نفحص طريق من v إلى w.
+
+نحسب:
+
+newDistance = dist[v] + distance(v,w)
+
+إذا:
+
+newDistance < dist[w]
+
+نحدث:
+
+dist[w] = newDistance
+path[w] = v
+
+معناها:
+وجدنا طريقا أقصر للوصول إلى w عن طريق v.
+
+مثال بسيط:
+
+dist[GazaCity] = 0
+distance(GazaCity, WadiGaza) = 7
+
+إذن:
+
+newDistance = 0 + 7 = 7
+
+إذا dist[WadiGaza] كانت infinity، تصبح 7.
+ونخزن:
+
+path[WadiGaza] = GazaCity
+
+
+12. متى يتوقف كود Dijkstra؟
+---------------------------
+
+يوجد أكثر من حالة توقف:
+
+الحالة الأولى:
+while يتوقف عندما تصبح الـ queue فاضية:
+
+while (!queue.isEmpty())
+
+إذا خلصت كل المدن الممكن الوصول لها، يتوقف.
+
+الحالة الثانية:
+إذا وصلنا إلى target:
+
+if (v == target) {
+    break;
+}
+
+هنا يتوقف مبكرا لأن Dijkstra عندما يخرج target من الـ MinPriorityQueue، تكون أقصر مسافة له أصبحت نهائية.
+
+الحالة الثالثة:
+إذا لم يوجد path:
+
+if (table[target.getIndex()].dist == INF)
+
+يرجع نتيجة فيها path فارغ.
+
+الجملة التي أقولها:
+الكود يتوقف عندما تصل الخوارزمية للهدف أو عندما لا يبقى أي city في الـ priority queue. وعند إخراج target من queue، تكون أقصر مسافة له مؤكدة.
+
+
+13. كيف يبني البرنامج المسار النهائي؟
+------------------------------------
+
+بعد انتهاء Dijkstra، يكون عند كل مدينة path يشير للمدينة السابقة.
+
+مثال:
+
+path[Nuseirat] = WadiGaza
+path[WadiGaza] = GazaCity
+
+لو target هو Nuseirat:
+نبدأ من Nuseirat ونرجع للخلف:
+
+Nuseirat
+WadiGaza
+GazaCity
+
+لكن هذا بالعكس.
+
+لذلك في buildPath:
+
+path.add(0, current)
+
+يعني كل مدينة نضيفها في بداية القائمة.
+
+فتصبح النتيجة:
+
+GazaCity -> WadiGaza -> Nuseirat
+
+
+14. كيف يحسب البرنامج Distance؟
+-------------------------------
+
+الكلاس:
+GeoDistance.java
+
+نستخدم معادلة Haversine.
+
+لماذا؟
+لأن latitude و longitude نقاط على سطح الأرض، وليست x,y عادية على ورقة.
+
+الأرض ليست خطا مستقيما، لذلك نحتاج معادلة تحسب المسافة على سطح الكرة الأرضية.
+
+الثابت:
+
+EARTH_RADIUS_KM = 6371.0
+
+هذا متوسط نصف قطر الأرض بالكيلومتر.
+
+
+15. شرح معادلة Haversine ببساطة
+-------------------------------
+
+لدينا مدينتان:
+
+a(latitude, longitude)
+b(latitude, longitude)
+
+أولا نحول من degrees إلى radians:
+
+lat1 = radians(a.latitude)
+lat2 = radians(b.latitude)
+deltaLat = radians(b.latitude - a.latitude)
+deltaLon = radians(b.longitude - a.longitude)
+
+لماذا radians؟
+لأن دوال sin و cos في Java تعمل بالراديان وليس بالدرجات.
+
+ثم:
+
+sinLat = sin(deltaLat / 2)
+sinLon = sin(deltaLon / 2)
+
+ثم نحسب h:
+
+h = sinLat^2 + cos(lat1) * cos(lat2) * sinLon^2
+
+h تمثل جزءا من الفرق الزاوي بين النقطتين.
+
+ثم:
+
+c = 2 * atan2(sqrt(h), sqrt(1 - h))
+
+c هي الزاوية المركزية بين النقطتين على الأرض بالراديان.
+
+ثم:
+
+distance = EARTH_RADIUS_KM * c
+
+معناها:
+المسافة = نصف قطر الأرض * الزاوية
+
+الجملة التي أقولها:
+أحسب الزاوية بين المدينتين على سطح الأرض، ثم أضربها بنصف قطر الأرض حتى أحصل على المسافة بالكيلومتر.
+
+
+16. من أين جاءت أرقام معادلة Distance؟
+--------------------------------------
+
+الأرقام الأساسية:
+
+6371.0
+
+هذا متوسط Earth radius بالكيلومتر.
+
+أما latitude و longitude فهي مقروءة من الملف:
+
+GazaCity 31.5050311 34.4641381
+
+31.5050311 = latitude
+34.4641381 = longitude
+
+البرنامج لا يخترع المسافة ولا يخزنها.
+هو يأخذ الإحداثيات الحقيقية من الملف ثم يحسب المسافة.
+
+الجملة التي أقولها:
+أرقام distance جاءت من إحداثيات المدن في الملف ومن ثابت نصف قطر الأرض، وليس من ملف الطرق.
+
+
+17. كيف يحسب وزن Edge؟
+----------------------
+
+في Edge.java عند إنشاء الطريق:
+
+distanceKm = GeoDistance.kilometers(from, to)
+
+يعني:
+وزن الطريق = المسافة بين إحداثيات from وإحداثيات to.
+
+هذا الوزن هو الذي تستخدمه Dijkstra.
+
+
+18. كيف عملنا إسقاط النقاط على الخريطة؟
+--------------------------------------
+
+الدكتور ممكن يسأل:
+كيف حولت latitude و longitude إلى مكان على الصورة؟
+
+الجواب:
+عندنا طريقتان:
+
+1. للمدن الموجودة على الصورة بوضوح، استخدمنا calibration.
+2. للمدن الجديدة غير الموجودة في calibration، استخدمنا projection تقريبي ثم منعنا النقطة من الوقوع في البحر.
+
+
+19. الطريقة الأولى: Calibration من الصورة نفسها
+----------------------------------------------
+
+في GazaMapApp.java:
+
+calibratedImagePoint(cityName)
+
+مثال:
+
+case "GazaCity":
+    return pointFromSourceImage(735, 345);
+
+معناه:
+على الصورة الأصلية، موقع GazaCity تقريبا عند:
+
+x = 735
+y = 345
+
+لكن الصورة الأصلية حجمها:
+
+SOURCE_IMAGE_WIDTH = 1126
+SOURCE_IMAGE_HEIGHT = 1397
+
+والـ Canvas في البرنامج حجمه:
+
+CANVAS_WIDTH = 740
+CANVAS_HEIGHT = 918
+
+لذلك نعمل scaling:
+
+screenX = sourceX * CANVAS_WIDTH / SOURCE_IMAGE_WIDTH
+screenY = sourceY * CANVAS_HEIGHT / SOURCE_IMAGE_HEIGHT
+
+مثال غزة:
+
+screenX = 735 * 740 / 1126
+screenX تقريبا 483
+
+screenY = 345 * 918 / 1397
+screenY تقريبا 227
+
+الجملة التي أقولها:
+لأن الخلفية صورة ثابتة وليست GIS map، أخذت pixel positions من الصورة الأصلية ثم عملت scaling حتى تناسب حجم الـ Canvas.
+
+
+20. الطريقة الثانية: Projection للمدن الجديدة
+--------------------------------------------
+
+إذا أضفنا مدينة جديدة في الملف ولم تكن موجودة في calibration، البرنامج يستخدم:
+
+x = PROJECT_X_LON * longitude + PROJECT_X_LAT * latitude + PROJECT_X_OFFSET
+y = PROJECT_Y_LON * longitude + PROJECT_Y_LAT * latitude + PROJECT_Y_OFFSET
+
+هذه تسمى affine transformation.
+
+الفكرة:
+نحول latitude/longitude إلى x/y على الصورة باستخدام معادلة خطية.
+
+الثوابت الموجودة في الكود:
+
+PROJECT_X_LON = 2353.69909956
+PROJECT_X_LAT = -705.88745472
+PROJECT_X_OFFSET = -58398.55913950
+
+PROJECT_Y_LON = -880.65639939
+PROJECT_Y_LAT = -1606.52289273
+PROJECT_Y_OFFSET = 81234.59497129
+
+
+21. كيف جبنا أرقام الـ Projection؟
+----------------------------------
+
+هذه الأرقام ليست عشوائية.
+
+الفكرة:
+أخذنا مدنا معروفة لها:
+
+latitude
+longitude
+
+ومكانها على الصورة:
+
+x
+y
+
+ثم اخترنا معادلة خطية تربط بينهم.
+
+المعادلة:
+
+x = A * lon + B * lat + C
+y = D * lon + E * lat + F
+
+نحتاج نقاط معروفة حتى نحسب A و B و C و D و E و F.
+
+عمليا:
+استخدمنا نقاط calibration من الصورة كمرجع، ثم ضبطنا المعاملات حتى تعطي مواقع قريبة من أماكن البلدات على الصورة.
+
+لكن لأن الصورة نفسها ليست خريطة GIS دقيقة، لا يمكن أن تكون المعادلة 100% لكل المدن.
+
+لذلك للمدن المهمة الموجودة على الصورة استخدمنا calibrated pixels، وهي أدق من المعادلة العامة.
+
+الجملة التي أقولها:
+أرقام projection جاءت من مطابقة مدن معروفة بين إحداثياتها الجغرافية ومكانها بالبكسل على الصورة. ثم استخدمناها كتحويل عام للمدن الجديدة.
+
+
+22. كيف عملنا حماية من البحر؟
+-----------------------------
+
+الدكتور قال ممنوع مدينة تقع في البحر وهي ليست في البحر.
+
+لذلك بعد projection نستدعي:
+
+keepPointOnMap(point)
+
+هذه تعمل:
+
+1. تمنع x و y من الخروج خارج حدود Canvas.
+2. تحسب تقريبا مكان الساحل عند نفس y.
+3. إذا x كانت يسار الساحل، نحركها يمينا إلى اليابسة.
+
+الساحل يحسب في:
+
+coastXAtY(y)
+
+عندنا نقاط تقريبية للساحل:
+
+ys = {0, 120, 230, 350, 470, 590, 700, 810, 918}
+xs = {545, 485, 430, 365, 300, 230, 160, 80, 0}
+
+هذه تعني:
+عند y معين، أين يبدأ اليابس تقريبا على محور x.
+
+إذا:
+
+x < coastX + 12
+
+نعدل:
+
+x = coastX + 12
+
+الجملة التي أقولها:
+عملت approximate coastline. إذا حساب projection وضع المدينة في البحر، أزحها يمينا داخل اليابسة.
+
+
+23. ماذا يعني bottom في الإسقاط؟
+--------------------------------
+
+إذا الدكتور قال bottom أو سأل عن اتجاه الصورة:
+
+في JavaFX Canvas:
+
+x يزيد من اليسار إلى اليمين.
+y يزيد من الأعلى إلى الأسفل.
+
+يعني:
+أعلى الصورة y = 0
+أسفل الصورة y = CANVAS_HEIGHT
+
+لذلك جنوب غزة يظهر أسفل الخريطة بقيم y أكبر.
+
+عندما نعمل pointFromSourceImage:
+
+screenY = sourceY * CANVAS_HEIGHT / SOURCE_IMAGE_HEIGHT
+
+هذا يحافظ على نسبة موقع النقطة من أعلى الصورة إلى أسفلها.
+
+مثال:
+إذا بلدة في أسفل الصورة الأصلية، sourceY يكون كبيرا.
+بعد scaling يظل screenY كبيرا، فتظهر أسفل الـ Canvas.
+
+الجملة التي أقولها:
+الإسقاط يحترم نظام Canvas، حيث y تنزل للأسفل. لذلك المناطق الجنوبية تظهر bottom لأن قيمة y الخاصة بها أكبر.
+
+
+24. سؤال Time Complexity
+------------------------
+
+الرموز:
+
+V = عدد المدن
+E = عدد الطرق
+
+Dijkstra مع priority queue:
+
+O((V + E) log V)
+
+أو تقريبا:
+
+O(E log V)
+
+لأن كل edge ممكن نعمل له relaxation، وكل add/poll من heap تكلف log V.
+
+في مشروعنا:
+
+V = 25
+E = 38
+
+إذن المشروع صغير جدا، لكن الخوارزمية نفسها مناسبة حتى لو زاد عدد المدن.
+
+ملاحظة مهمة:
+استخدمنا MyLinkedList، و get(index) فيها O(n).
+لذلك بعض loops التي تستخدم get داخل linked list قد تزيد الزمن عمليا.
+لكن من ناحية فكرة Dijkstra الأساسية مع heap:
+
+O((V + E) log V)
+
+الجملة التي أقولها:
+نظريا Dijkstra مع MinPriorityQueue هي O((V+E)logV). وبما أن المشروع صغير، الأداء ممتاز. والـ LinkedList مستخدمة تنفيذا لشرط الدكتور وليس لأنها أسرع في الوصول العشوائي.
+
+
+25. Space Complexity
+--------------------
+
+نخزن:
+
+cities list = O(V)
+adjacency list = O(V + E)
+Dijkstra table = O(V)
+priority queue = O(V) تقريبا، وقد تحتوي نسخا قديمة من نفس المدينة
+path result = O(V)
+
+إذن المساحة:
+
+O(V + E)
+
+
+26. لماذا يوجد currentNode.distance > vEntry.dist؟
+--------------------------------------------------
+
+في Dijkstra ممكن نفس المدينة تدخل الـ queue أكثر من مرة.
+
+مثال:
+أول مرة وجدنا لها distance = 20.
+بعدها وجدنا طريقا أفضل distance = 15.
+
+تصير في الـ queue نسختان:
+
+20
+15
+
+عندما تخرج نسخة 20 لاحقا، تكون قديمة.
+
+لذلك نعمل:
+
+if (vEntry.known || currentNode.distance > vEntry.dist) {
+    continue;
+}
+
+معناها:
+إذا النسخة قديمة، تجاهلها.
+
+
+27. لماذا يوجد known؟
+---------------------
+
+known يعني أن أقصر مسافة لهذه المدينة أصبحت نهائية.
+
+في Dijkstra:
+عندما تخرج المدينة من MinPriorityQueue بأقل distance، نعرف أن هذه أقل مسافة ممكنة لها.
+
+بعدها لا نحتاج نحدثها مرة أخرى.
+
+
+28. ماذا يحدث إذا لا يوجد path؟
+-------------------------------
+
+إذا target بقيت dist لها INF:
+
+table[target.getIndex()].dist == INF
+
+يرجع:
+
+new PathResult(new MyLinkedList<City>(), INF)
+
+وفي الواجهة يظهر:
+
+No path found.
+
+هذا ممكن يحدث أكثر في directed graph، لأن الطريق قد يكون موجودا من A إلى B وليس من B إلى A.
+
+
+29. ماذا أقول إذا فتح الدكتور Dijkstra.java؟
+--------------------------------------------
+
+امش معه بهذا الترتيب:
+
+1. هذا INF يمثل infinity.
+2. هذا TableEntry يمثل جدول السلايدات: known, dist, path.
+3. QueueNode يخزن city و distance حتى تدخل الـ MinPriorityQueue.
+4. shortestPath يبدأ بتصفير نتائج التشغيل السابق.
+5. dist[source] = 0.
+6. نضيف source للـ queue.
+7. كل مرة نأخذ أقل city.
+8. إذا وصلنا target نوقف.
+9. نفحص outgoing edges فقط لأن graph directed.
+10. نعمل relaxation.
+11. إذا وجدنا مسافة أقصر، نحدث dist و path.
+12. بعد النهاية buildPath يبني المسار من target إلى source.
+
+
+30. ماذا أقول إذا سأل عن الملف؟
+-------------------------------
+
+الملف مقسم إلى قسمين:
+
+القسم الأول:
+المدن مع إحداثياتها.
+
+القسم الثاني:
+الطرق الموجهة.
+
+أول رقمين يخبرون البرنامج كم مدينة وكم طريق سيقرأ.
+
+التعليقات تبدأ بـ # ولا تؤثر على القراءة.
+
+لا يوجد distance في الملف لأن المسافة محسوبة من الإحداثيات.
+
+
+31. ماذا أقول إذا سأل عن المعادلات؟
+-----------------------------------
+
+Distance:
+استخدمت Haversine لأنها تحسب المسافة بين نقطتين latitude/longitude على سطح الأرض.
+
+Projection:
+استخدمت scaling للمدن المعروفة على الصورة:
+
+screenX = sourceX * canvasWidth / imageWidth
+screenY = sourceY * canvasHeight / imageHeight
+
+وللمدن الجديدة استخدمت affine transformation:
+
+x = A*lon + B*lat + C
+y = D*lon + E*lat + F
+
+ثم استخدمت coastline protection حتى لا تقع النقطة في البحر.
+
+
+32. مختصر للحفظ
+---------------
+
+المشروع:
+JavaFX app يعرض خريطة غزة ويحسب shortest path.
+
+Graph:
+Directed weighted graph.
+
+Vertex:
+City.
+
+Edge:
+Directed road.
+
+Weight:
+Distance calculated by Haversine.
+
+Data structure:
+Custom MyLinkedList.
+Custom MinPriorityQueue.
+
+Dijkstra table:
+known, dist, path.
+
+Stop condition:
+when target is finalized or queue becomes empty.
+
+Time:
+O((V+E)logV) نظريا مع heap.
+
+File:
+first line counts, then cities, then directed roads.
+
+Projection:
+calibrated pixels for known cities, affine projection for new cities, coastline protection.
+
+
+33. إجابة جاهزة قصيرة جدا
+-------------------------
+
+استخدمت Dijkstra لأن المشروع عبارة عن directed weighted graph، والمدن هي vertices والطرق هي edges والمسافة هي weight. أقرأ المدن والطرق من الملف، وكل طريق موجه من أول اسم إلى ثاني اسم. المسافة لا أخزنها في الملف، بل أحسبها من latitude و longitude باستخدام Haversine. داخل Dijkstra عندي table فيه known و dist و path مثل السلايدات، وأستخدم MinPriorityQueue مخصصة حتى أختار أقل dist. الخوارزمية تقف عندما أصل للـ target أو تصبح الـ queue فاضية. أما عرض المدن على الخريطة فتم بإسقاطها على الصورة: للمدن المعروفة استخدمت pixel calibration ثم scaling، وللمدن الجديدة استخدمت affine projection مع حماية من البحر.
