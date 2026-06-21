@@ -1,0 +1,6 @@
+target/
+work-classes/
+*.class
+*.log
+.DS_Store
+Thumbs.db

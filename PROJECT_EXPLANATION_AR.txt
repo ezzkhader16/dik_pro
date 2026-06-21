@@ -1,0 +1,352 @@
+شرح مشروع Gaza Dijkstra JavaFX
+==============================
+
+1. فكرة المشروع
+---------------
+المشروع عبارة عن برنامج JavaFX يقرأ خريطة من ملف نصي، يمثل البلدات كـ graph، ثم يستخدم خوارزمية Dijkstra لإيجاد أقصر مسار بين source و target يختارهم المستخدم من القوائم.
+
+كل بلدة لها:
+- اسم
+- Latitude
+- Longitude
+- Button ظاهر فوق الخريطة
+
+كل طريق بين بلدتين يمثل edge في graph.
+وزن الطريق هو المسافة بالكيلومتر بين إحداثيات البلدتين، ويتم حسابه وقت تشغيل البرنامج، وليس تخزينه في الملف.
+
+
+2. الملفات المهمة
+-----------------
+
+src/main/java/application/Main.java
+هذا الملف هو نقطة التشغيل. وظيفته فقط تشغيل GazaMapApp.
+
+src/main/java/application/GazaMapApp.java
+هذا هو ملف الواجهة الرئيسي:
+- يقرأ الخريطة من data/map_data.txt
+- يعرض صورة الخريطة
+- يضع Button لكل بلدة
+- يعرض latitude و longitude عند الضغط على Button البلدة
+- يسمح باختيار source و target من القوائم
+- يشغل Dijkstra عند الضغط على Run
+- يرسم أقصر path على الخريطة
+- يعرض path و distance
+
+src/main/java/application/City.java
+يمثل بلدة واحدة. يحتوي:
+- index
+- name
+- latitude
+- longitude
+
+src/main/java/application/Edge.java
+يمثل طريق بين بلدتين. يحتوي:
+- from
+- to
+- distanceKm
+
+المسافة تحسب باستخدام GeoDistance.
+
+src/main/java/application/Graph.java
+يمثل الخريطة كـ graph باستخدام adjacency list.
+استخدمنا:
+MyArrayList<City> cities
+MyArrayList<MyArrayList<Edge>> adjacency
+
+لم نستخدم HashMap أو ArrayList الجاهزة.
+
+src/main/java/application/MapFileReader.java
+يقرأ ملف البيانات:
+أول سطر: عدد المدن وعدد الطرق
+بعدها أسطر المدن:
+CityName latitude longitude
+بعدها أسطر الطرق:
+CityA CityB
+
+src/main/java/application/Dijkstra.java
+تطبيق خوارزمية Dijkstra.
+يستخدم جدول مثل السلايدات:
+known
+dist
+path
+
+ويستخدم MinPriorityQueue حتى نختار المدينة ذات أقل dist.
+
+src/main/java/application/MyArrayList.java
+تنفيذ خاص لـ ArrayList.
+فيه:
+- Object[] data
+- int size
+- add
+- get
+- clear
+- ensureCapacity
+
+src/main/java/application/MinPriorityQueue.java
+تنفيذ خاص لـ PriorityQueue باستخدام heap.
+أقل priority تكون في الجذر heap[0].
+
+src/main/java/application/GeoDistance.java
+يحسب المسافة بين بلدتين باستخدام معادلة Haversine.
+هذه المعادلة مناسبة لحساب المسافة بين نقطتين latitude/longitude على سطح الأرض.
+
+src/main/resources/images/map-background.png
+صورة الخريطة.
+
+data/map_data.txt
+ملف المدن والطرق.
+
+
+3. شكل ملف البيانات map_data.txt
+---------------------------------
+
+مثال:
+
+25 38
+GazaCity 31.5050311 34.4641381
+Rafah 31.2752047 34.2558269
+...
+GazaCity AlZeitoun
+Rafah KhanYunis
+
+أول رقم = عدد المدن
+ثاني رقم = عدد الطرق
+
+بعدها نكتب كل المدن، ثم الطرق.
+
+مهم:
+إذا أضفنا مدينة جديدة، لازم نزيد عدد المدن.
+إذا أضفنا طرق جديدة، لازم نزيد عدد الطرق.
+
+
+4. كيف يتم بناء graph؟
+----------------------
+
+MapFileReader يقرأ الملف.
+لكل مدينة يعمل:
+graph.addCity(new City(index, name, latitude, longitude))
+
+Graph يضيف المدينة في cities، ويضيف لها adjacency list فاضية.
+
+لكل طريق مثل:
+GazaCity AlZeitoun
+
+يعمل:
+graph.addUndirectedRoad("GazaCity", "AlZeitoun")
+
+لأن الطريق غير موجه، يتم إضافته بالاتجاهين:
+GazaCity -> AlZeitoun
+AlZeitoun -> GazaCity
+
+
+5. كيف تحسب المسافة؟
+--------------------
+
+عند إنشاء Edge:
+distanceKm = GeoDistance.kilometers(from, to)
+
+GeoDistance يستخدم latitude و longitude للمدينتين.
+لا نخزن المسافة في الملف؛ هذا يطابق شرط المشروع.
+
+
+6. شرح Dijkstra
+---------------
+
+الهدف:
+إيجاد أقصر path من source إلى target.
+
+لكل مدينة يوجد TableEntry:
+
+known:
+هل اعتمدنا أقصر مسافة لهذه المدينة؟
+
+dist:
+أقصر مسافة معروفة من source لهذه المدينة.
+
+path:
+المدينة السابقة في أقصر مسار.
+
+في البداية:
+كل dist = infinity
+dist[source] = 0
+
+نضع source في MinPriorityQueue.
+
+كل مرة:
+1. نأخذ المدينة صاحبة أقل dist من queue.
+2. إذا كانت target نوقف.
+3. نفحص كل الجيران.
+4. إذا المسافة عبر المدينة الحالية أقصر، نحدث dist و path.
+5. نضيف الجار للـ queue.
+
+هذه العملية اسمها relaxation.
+
+بعد الانتهاء:
+نرجع من target للخلف باستخدام path حتى نصل source.
+
+
+7. لماذا استخدمنا MinPriorityQueue؟
+-----------------------------------
+
+في السلايدات يوجد اختيار للـ smallest unknown distance vertex.
+بدل ما نعمل scan على كل المدن كل مرة، استخدمنا min heap.
+هذا يعطي المدينة ذات أقل dist بسرعة.
+
+لكن الـ PriorityQueue ليست جاهزة من Java.
+نحن كتبنا MinPriorityQueue بأنفسنا.
+
+
+8. كيف تعمل MyArrayList؟
+------------------------
+
+MyArrayList تشبه ArrayList الجاهزة لكن مكتوبة يدويا.
+
+عندها Object[] data.
+إذا امتلأت، نعمل مصفوفة أكبر بضعف الحجم وننسخ البيانات.
+
+هذا يتم في ensureCapacity.
+
+
+9. كيف تعمل MinPriorityQueue؟
+-----------------------------
+
+MinPriorityQueue تستخدم heap.
+
+عند add:
+نضع العنصر في آخر المصفوفة ثم bubbleUp.
+
+عند poll:
+نأخذ heap[0] لأنه الأصغر.
+نضع آخر عنصر مكانه ثم bubbleDown.
+
+priority تأتي من interface PriorityItem.
+
+
+10. شرح الواجهة
+---------------
+
+GazaMapApp يرسم الخريطة باستخدام Canvas.
+وفوق Canvas يوجد Pane.
+على هذا Pane نضع Button لكل مدينة.
+
+كل Button:
+- يظهر كنقطة حمراء أو صفراء
+- عند الضغط عليه يعرض اسم المدينة و latitude و longitude
+- لا يغير source و target
+
+source و target يتم اختيارهم فقط من القوائم.
+
+عند الضغط Run:
+يتم تشغيل Dijkstra.
+ثم يظهر:
+- path في TextArea
+- distance تحت path
+- distance أيضا في TextField
+- خط المسار على الخريطة
+
+
+11. كيف تظهر المدن على الخريطة؟
+-------------------------------
+
+كل مدينة لها latitude و longitude.
+لكن صورة الخريطة ليست GIS map رسمية، لذلك لا يمكن إسقاط الإحداثيات عليها 100% بمعادلة عادية.
+
+لذلك استخدمنا طريقتين:
+
+1. للمدن الموجودة في الصورة:
+نستخدم calibrated pixel point.
+هذه النقطة تجعل Button يظهر فوق مكان البلدة الصحيح في الصورة.
+
+2. للمدن الجديدة التي تضاف من الملف:
+نستخدم projectCity بمعادلة عامة من latitude/longitude إلى x/y.
+ثم keepPointOnMap تمنع النقطة قدر الإمكان من الظهور في البحر.
+
+بهذا الشكل:
+- المدن المعروفة تظهر بدقة على الصورة.
+- المدن الجديدة تظهر حسب إحداثياتها، وإذا قربت من البحر يتم تعديلها للداخل.
+
+
+12. كيف أضيف مدينة جديدة؟
+-------------------------
+
+مثلا إضافة Netzarim:
+
+1. زيدي عدد المدن في أول سطر.
+لو كان:
+25 38
+وصار عندك مدينة جديدة وطريقين:
+26 40
+
+2. أضيفي المدينة في قسم المدن:
+Netzarim 31.4620000 34.4300000
+
+3. أضيفي طرقها:
+Netzarim WadiGaza
+Netzarim GazaCity
+
+4. شغلي البرنامج من جديد.
+
+المدينة ستظهر في source و target تلقائيا لأن القوائم تبنى من graph.getCities().
+
+
+13. كيف أجيب latitude و longitude؟
+----------------------------------
+
+من Google Maps:
+1. افتحي Google Maps.
+2. ابحثي عن المكان.
+3. كليك يمين على المكان.
+4. أول سطر فيه رقمين.
+
+مثال:
+31.4620000, 34.4300000
+
+الأول latitude.
+الثاني longitude.
+
+في الملف نكتب:
+Netzarim 31.4620000 34.4300000
+
+
+14. نقاط مهمة للمناقشة
+---------------------
+
+السؤال: هل استخدمت ArrayList جاهزة؟
+الجواب: لا. استخدمت MyArrayList بتنفيذ يدوي.
+
+السؤال: هل استخدمت PriorityQueue جاهزة؟
+الجواب: لا. استخدمت MinPriorityQueue بتنفيذ heap يدوي.
+
+السؤال: كيف تم تمثيل graph؟
+الجواب: adjacency list.
+
+السؤال: هل المسافة مخزنة في الملف؟
+الجواب: لا. المسافة تحسب وقت التشغيل من latitude و longitude.
+
+السؤال: كيف تختار source و target؟
+الجواب: من combo boxes فقط.
+
+السؤال: ماذا يحدث عند الضغط على Button المدينة؟
+الجواب: يعرض اسم المدينة و latitude و longitude.
+
+السؤال: كيف تضيف مدينة جديدة؟
+الجواب: أضيفها في map_data.txt، أزيد count، أضيف الطرق، ثم أعيد تشغيل البرنامج.
+
+السؤال: لماذا عندك calibratedImagePoint؟
+الجواب: لأن الخلفية صورة ثابتة وليست GIS map، لذلك نحتاج معايرة بكسل حتى تظهر المدن فوق أماكنها الصحيحة على الصورة.
+
+
+15. خطوات التشغيل
+-----------------
+
+افتحي فولدر المشروع:
+GazaDijkstraVSCodeMaven
+
+اضغطي F5 واختاري:
+F5 - Run Without Maven
+
+أو من التيرمنال:
+.vscode\compile.bat
+
+ثم F5.
+

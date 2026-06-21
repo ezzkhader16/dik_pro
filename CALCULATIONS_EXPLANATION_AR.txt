@@ -1,0 +1,578 @@
+ملف شرح الحسابات في مشروع Gaza Dijkstra
+========================================
+
+هذا الملف يشرح كل العمليات الحسابية الموجودة في المشروع: حساب المسافة، حساب موقع المدينة على الخريطة، حساب أقصر مسار، وحسابات الـ Priority Queue.
+
+
+1. حساب المسافة بين مدينتين
+---------------------------
+
+الملف المسؤول:
+src/main/java/application/GeoDistance.java
+
+الدالة:
+GeoDistance.kilometers(City a, City b)
+
+الهدف:
+حساب المسافة بين مدينتين من خلال latitude و longitude.
+
+لماذا لا نستخدم طرح عادي؟
+لأن latitude و longitude إحداثيات على سطح الأرض، والأرض كروية تقريباً. لذلك نستخدم معادلة Haversine.
+
+القيم المستخدمة:
+
+EARTH_RADIUS_KM = 6371.0
+
+هذا نصف قطر الأرض بالكيلومتر.
+
+خطوات الحساب:
+
+1. نحول الإحداثيات من degrees إلى radians:
+
+lat1 = radians(a.latitude)
+lat2 = radians(b.latitude)
+deltaLat = radians(b.latitude - a.latitude)
+deltaLon = radians(b.longitude - a.longitude)
+
+في Java:
+
+double lat1 = Math.toRadians(a.getLatitude());
+double lat2 = Math.toRadians(b.getLatitude());
+double deltaLat = Math.toRadians(b.getLatitude() - a.getLatitude());
+double deltaLon = Math.toRadians(b.getLongitude() - a.getLongitude());
+
+2. نحسب:
+
+sinLat = sin(deltaLat / 2)
+sinLon = sin(deltaLon / 2)
+
+3. نحسب قيمة h:
+
+h = sinLat^2 + cos(lat1) * cos(lat2) * sinLon^2
+
+في Java:
+
+double h = sinLat * sinLat + Math.cos(lat1) * Math.cos(lat2) * sinLon * sinLon;
+
+4. نحسب الزاوية c:
+
+c = 2 * atan2(sqrt(h), sqrt(1 - h))
+
+في Java:
+
+double c = 2.0 * Math.atan2(Math.sqrt(h), Math.sqrt(1.0 - h));
+
+5. المسافة النهائية:
+
+distance = EARTH_RADIUS_KM * c
+
+في Java:
+
+return EARTH_RADIUS_KM * c;
+
+مثال بسيط:
+إذا كان عندنا:
+
+GazaCity 31.5050311 34.4641381
+AlZeitoun 31.4922975 34.4532943
+
+الدالة تأخذ الفرق بين خطوط العرض والطول، ثم تحوله لمسافة حقيقية بالكيلومتر.
+
+مهم للمناقشة:
+المسافة لا تخزن في ملف data/map_data.txt. هي تحسب عند تشغيل البرنامج داخل Edge.
+
+
+2. حساب وزن الطريق Edge
+-----------------------
+
+الملف المسؤول:
+src/main/java/application/Edge.java
+
+كل Edge يمثل طريق بين مدينتين.
+
+عند إنشاء Edge:
+
+this.distanceKm = GeoDistance.kilometers(from, to);
+
+يعني:
+وزن الطريق = المسافة بين إحداثيات المدينة الأولى والمدينة الثانية.
+
+هذه القيمة هي التي تستخدمها خوارزمية Dijkstra.
+
+
+3. حساب موقع المدينة على الخريطة
+--------------------------------
+
+الملف المسؤول:
+src/main/java/application/GazaMapApp.java
+
+الدالة:
+projectCity(City city)
+
+المشكلة:
+عندنا latitude و longitude حقيقية، لكن صورة الخريطة ليست GIS map رسمية. هي صورة ثابتة. لذلك لا يمكن ضمان أن معادلة جغرافية بسيطة تضع كل المدن فوق أماكنها 100%.
+
+الحل في المشروع:
+يوجد طريقتان لحساب موقع المدينة على الخريطة:
+
+1. calibrated pixel point للمدن المعروفة في الصورة.
+2. general projection للمدن الجديدة التي تضاف من الملف.
+
+
+4. طريقة calibrated pixel point
+-------------------------------
+
+الدالة:
+calibratedImagePoint(String cityName)
+
+الفكرة:
+لأن الصورة ثابتة، أخذنا نقطة pixel لكل بلدة ظاهرة في الصورة.
+
+مثلاً:
+
+case "GazaCity":
+    return pointFromSourceImage(735, 345);
+
+هذا يعني أن GazaCity مكانها في الصورة الأصلية تقريباً:
+x = 735
+y = 345
+
+لكن الصورة الأصلية حجمها:
+
+SOURCE_IMAGE_WIDTH = 1126
+SOURCE_IMAGE_HEIGHT = 1397
+
+أما Canvas في البرنامج حجمه:
+
+CANVAS_WIDTH = 740
+CANVAS_HEIGHT = 918
+
+لذلك نحتاج scaling.
+
+
+5. حساب التحويل من إحداثيات الصورة الأصلية إلى Canvas
+-----------------------------------------------------
+
+الدالة:
+pointFromSourceImage(double sourceX, double sourceY)
+
+المعادلة:
+
+screenX = sourceX * CANVAS_WIDTH / SOURCE_IMAGE_WIDTH
+screenY = sourceY * CANVAS_HEIGHT / SOURCE_IMAGE_HEIGHT
+
+في Java:
+
+return new Point2D(
+    sourceX * CANVAS_WIDTH / SOURCE_IMAGE_WIDTH,
+    sourceY * CANVAS_HEIGHT / SOURCE_IMAGE_HEIGHT
+);
+
+مثال:
+
+GazaCity في الصورة الأصلية:
+sourceX = 735
+sourceY = 345
+
+حساب x:
+
+x = 735 * 740 / 1126
+x ≈ 483.1
+
+حساب y:
+
+y = 345 * 918 / 1397
+y ≈ 226.7
+
+إذن زر GazaCity يظهر تقريباً عند:
+
+(483, 227)
+
+على Canvas.
+
+مهم:
+هذه الطريقة تجعل المدن المعروفة تظهر فوق مكانها الصحيح في الصورة.
+
+
+6. حساب موقع مدينة جديدة غير موجودة في calibration
+--------------------------------------------------
+
+إذا أضفنا مدينة جديدة في ملف data/map_data.txt ولم نضفها داخل calibratedImagePoint، البرنامج يستخدم projection عام.
+
+الدالة:
+projectCity(City city)
+
+المعادلات:
+
+x = PROJECT_X_LON * longitude + PROJECT_X_LAT * latitude + PROJECT_X_OFFSET
+y = PROJECT_Y_LON * longitude + PROJECT_Y_LAT * latitude + PROJECT_Y_OFFSET
+
+القيم الموجودة في الكود:
+
+PROJECT_X_LON = 2353.69909956
+PROJECT_X_LAT = -705.88745472
+PROJECT_X_OFFSET = -58398.55913950
+
+PROJECT_Y_LON = -880.65639939
+PROJECT_Y_LAT = -1606.52289273
+PROJECT_Y_OFFSET = 81234.59497129
+
+مثال عام:
+لو أضفنا:
+
+NewCity lat lon
+
+فالبرنامج يحسب:
+
+x = 2353.69909956 * lon + (-705.88745472) * lat - 58398.55913950
+y = -880.65639939 * lon + (-1606.52289273) * lat + 81234.59497129
+
+ثم يعمل:
+
+keepPointOnMap(new Point2D(x, y))
+
+
+7. حساب منع النقطة من الوقوع في البحر
+------------------------------------
+
+الدالة:
+keepPointOnMap(Point2D point)
+
+الهدف:
+إذا مدينة جديدة حسبتها المعادلة وطلعت في البحر، نحاول نزيحها لليمين داخل اليابسة.
+
+أولاً نحصر النقطة داخل حدود Canvas:
+
+x = clamp(point.x, 8, CANVAS_WIDTH - 8)
+y = clamp(point.y, 8, CANVAS_HEIGHT - 8)
+
+clamp تعني:
+إذا القيمة أقل من minimum، رجع minimum.
+إذا أكبر من maximum، رجع maximum.
+غير ذلك رجع القيمة نفسها.
+
+بعدها نحسب خط الساحل التقريبي عند y:
+
+coastX = coastXAtY(y)
+
+إذا:
+
+x < coastX + 12
+
+يعني النقطة يسار الساحل، أي غالباً في البحر.
+
+فنغيرها:
+
+x = coastX + 12
+
+بهذا الشكل تدخل النقطة لليابسة.
+
+
+8. حساب coastXAtY
+-----------------
+
+الدالة:
+coastXAtY(double y)
+
+عندنا نقاط تقريبية لخط الساحل:
+
+ys = {0, 120, 230, 350, 470, 590, 700, 810, 918}
+xs = {545, 485, 430, 365, 300, 230, 160, 80, 0}
+
+كل y لها x تقريبي للساحل.
+
+إذا y بين نقطتين، نستخدم interpolation.
+
+المعادلة:
+
+t = (y - y1) / (y2 - y1)
+coastX = x1 + (x2 - x1) * t
+
+مثال:
+لو y = 300
+فهو بين:
+
+y1 = 230, x1 = 430
+y2 = 350, x2 = 365
+
+t = (300 - 230) / (350 - 230)
+t = 70 / 120
+t = 0.583
+
+coastX = 430 + (365 - 430) * 0.583
+coastX ≈ 392.1
+
+يعني عند y = 300، الساحل تقريباً x = 392.
+
+
+9. حساب اختيار أقرب مدينة عند الضغط على الخريطة
+----------------------------------------------
+
+الدالة:
+findNearestCity(double x, double y)
+
+الفكرة:
+عندما يضغط المستخدم على الخريطة، البرنامج يبحث عن أقرب مدينة من مكان الضغط.
+
+لكل مدينة:
+
+distance = point.distance(x, y)
+
+هذه مسافة pixel على الشاشة، ليست مسافة جغرافية.
+
+إذا كانت أقل من bestDistance، نخزن المدينة كأقرب مدينة.
+
+القيمة الابتدائية:
+
+bestDistance = 16.0
+
+يعني الضغط لازم يكون قريب من الزر/النقطة حتى يتعرف عليها.
+
+
+10. حسابات Dijkstra
+-------------------
+
+الملف المسؤول:
+src/main/java/application/Dijkstra.java
+
+لكل مدينة TableEntry:
+
+known
+dist
+path
+touched
+
+في البداية:
+
+dist[source] = 0
+dist[others] = infinity
+
+نضع source في MinPriorityQueue.
+
+ثم نكرر:
+
+1. خذ المدينة v ذات أقل distance من queue.
+2. إذا v معروفة already، تجاهلها.
+3. اجعل known[v] = true.
+4. إذا v == target، توقف.
+5. افحص كل edge من v إلى w.
+6. احسب:
+
+newDistance = dist[v] + edge.distanceKm
+
+7. إذا:
+
+newDistance < dist[w]
+
+نحدث:
+
+dist[w] = newDistance
+path[w] = v
+
+ثم نضيف w إلى queue بمسافتها الجديدة.
+
+هذه العملية اسمها relaxation.
+
+
+11. مثال relaxation
+-------------------
+
+افترض:
+
+dist[GazaCity] = 0
+edge GazaCity -> AlZeitoun = 2.0 km
+dist[AlZeitoun] = infinity
+
+نحسب:
+
+newDistance = dist[GazaCity] + 2.0
+newDistance = 0 + 2.0
+newDistance = 2.0
+
+لأن:
+
+2.0 < infinity
+
+نحدث:
+
+dist[AlZeitoun] = 2.0
+path[AlZeitoun] = GazaCity
+
+
+12. حساب بناء المسار النهائي
+----------------------------
+
+الدالة:
+buildPath(City source, City target)
+
+بعد انتهاء Dijkstra، كل مدينة تعرف المدينة السابقة في أقصر طريق.
+
+نبدأ من target:
+
+current = target
+
+ثم:
+
+path.add(0, current)
+current = table[current.index].path
+
+نكرر حتى نصل source.
+
+لماذا add(0, current)؟
+لأننا نمشي من الهدف للخلف، فنضيف كل مدينة في بداية القائمة حتى يصبح الترتيب:
+
+source -> ... -> target
+
+
+13. حساب المسافة النهائية للمسار
+--------------------------------
+
+المسافة النهائية تكون:
+
+table[target.index].dist
+
+هذه القيمة تمثل مجموع أوزان الطرق في أقصر path.
+
+مثلاً:
+
+Rafah -> KhanYunis = 8 km
+KhanYunis -> AlQarara = 5 km
+AlQarara -> DeirAlBalah = 6 km
+
+المجموع:
+
+8 + 5 + 6 = 19 km
+
+Dijkstra يحسب هذا المجموع تلقائياً من edge distances.
+
+
+14. حسابات MinPriorityQueue
+---------------------------
+
+الملف:
+src/main/java/application/MinPriorityQueue.java
+
+الـ heap يستخدم array.
+
+إذا كان العنصر في index i:
+
+parent = (i - 1) / 2
+left child = i * 2 + 1
+right child = i * 2 + 2
+
+
+15. حساب bubbleUp
+-----------------
+
+عند إضافة عنصر جديد:
+
+1. نضعه في آخر heap.
+2. نحسب parent.
+3. إذا priority للعنصر أقل من priority للأب، نعمل swap.
+4. نكرر حتى يصبح الأب أصغر أو نصل الجذر.
+
+هذا يحافظ أن أقل distance تكون في الأعلى.
+
+
+16. حساب bubbleDown
+-------------------
+
+عند حذف أقل عنصر:
+
+1. نأخذ heap[0].
+2. نضع آخر عنصر مكانه.
+3. نقارن مع left و right child.
+4. نبدله مع الأصغر.
+5. نكرر حتى يصبح أصغر من أولاده.
+
+
+17. حساب تكبير MyArrayList
+--------------------------
+
+الملف:
+src/main/java/application/MyArrayList.java
+
+إذا data امتلأت:
+
+newData = new Object[data.length * 2]
+
+ثم ننسخ العناصر القديمة إلى الجديدة.
+
+مثال:
+
+الحجم القديم = 10
+إذا امتلأ، الحجم الجديد = 20
+
+ثم 40، ثم 80، وهكذا.
+
+
+18. حساب عدد المدن والطرق من الملف
+---------------------------------
+
+أول سطر في map_data.txt:
+
+25 38
+
+يعني:
+
+cityCount = 25
+edgeCount = 38
+
+MapFileReader يقرأ أول 25 سطر كمدن.
+ثم يقرأ 38 سطر كطرق.
+
+إذا أضفت مدينة:
+
+25 تصبح 26
+
+إذا أضفت طريقين:
+
+38 تصبح 40
+
+
+19. حساب لون Button المدينة
+---------------------------
+
+الدالة:
+cityButtonStyle(boolean selected)
+
+إذا المدينة source أو target:
+
+fill = "#ffd100"
+
+أي أصفر.
+
+غير ذلك:
+
+fill = "#ff4848"
+
+أي أحمر.
+
+هذا ليس حساب رياضي مهم، لكنه قرار عرض بصري.
+
+
+20. ملخص سريع للحسابات
+---------------------
+
+المسافة بين بلدتين:
+Haversine formula.
+
+وزن الطريق:
+distanceKm بين from و to.
+
+أقصر مسار:
+Dijkstra relaxation.
+
+اختيار أقل مدينة:
+MinPriorityQueue heap.
+
+موقع المدينة على الخريطة:
+calibrated pixel point للمدن المعروفة.
+general projection + coast protection للمدن الجديدة.
+
+منع النقطة من البحر:
+coastXAtY + clamp.
+
+المسافة النهائية:
+dist[target].
+

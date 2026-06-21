@@ -1,0 +1,42 @@
+Coordinate source notes
+=======================
+
+The locations in map_data.txt match the towns/places shown on the provided Gaza map image.
+Coordinates were checked with OpenStreetMap/Nominatim where possible.
+Some crossings or local districts do not always appear as clean town objects in Nominatim,
+so the selected coordinate is the best matching point for that shown place.
+
+Locations:
+
+ErezCrossing: 31.5587000, 34.5403000
+BeitLahia: 31.5497700, 34.5024697
+BeitHanoun: 31.5390220, 34.5384182
+Jabalia: 31.5282137, 34.4831674
+GazaCity: 31.5050311, 34.4641381
+AlShatiCamp: 31.5357348, 34.4471198
+SheikhRadwan: 31.5321920, 34.4667695
+Shujaiyya: 31.4979729, 34.4726451
+AlZeitoun: 31.4922975, 34.4532943
+Nuseirat: 31.4482607, 34.3935262
+WadiGaza: 31.4573395, 34.4121338
+Netzarim: 31.4620000, 34.4300000
+DeirAlBalah: 31.4183455, 34.3502476
+AlMaghazi: 31.4227161, 34.3864103
+AlZawaida: 31.4280377, 34.3653001
+AlQarara: 31.3782508, 34.3355147
+AlMawasi: 31.3785396, 34.3086079
+KhanYunis: 31.3443293, 34.3095897
+BaniSuheila: 31.3401107, 34.3222778
+AbasanAlKabira: 31.3238491, 34.3497101
+Khuzaa: 31.3052590, 34.3607577
+TelAlSultan: 31.3090108, 34.2431681
+Rafah: 31.2752047, 34.2558269
+RafahCrossing: 31.2500586, 34.2602194
+KeremAbuSalem: 31.2280000, 34.2844000
+
+Nominatim URL:
+https://nominatim.openstreetmap.org/
+
+Projection note:
+The background image is a rendered static map, not a GIS layer with exact pixel metadata.
+The app therefore uses a calibrated affine projection fitted to the shown labels on this image.

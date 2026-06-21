@@ -1,0 +1,18 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "F5 - Run Without Maven",
+      "type": "java",
+      "request": "launch",
+      "mainClass": "application.Main",
+      "cwd": "${workspaceFolder}",
+      "classPaths": [
+        "${workspaceFolder}/target/classes"
+      ],
+      "vmArgs": "--module-path \"C:\\JavaSDK\\javafx-sdk-21.0.10\\lib\" --add-modules javafx.controls",
+      "preLaunchTask": "compile without maven",
+      "console": "integratedTerminal"
+    }
+  ]
+}
